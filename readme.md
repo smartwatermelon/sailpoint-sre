@@ -65,4 +65,71 @@ Or run it directly with Docker, providing arguments as needed:
 docker run --rm -v "$(pwd)/.env:/app/.env" github-pr-report --token=your_token --repo=owner/repo --days=7
 ```
 
-The report will be printed to the console.
+**The report will be printed to the console.**
+
+## Troubleshooting
+
+If you encounter issues while using the PR Report Generator, here are some common problems and their solutions:
+
+### Authentication and Access Issues
+
+1. **Invalid or Missing Token**
+   - Ensure you've provided a valid GitHub token.
+   - Check that the token hasn't expired.
+   - Verify the token has the necessary permissions (at least `repo` or `public_repo`).
+
+2. **Repository Not Found or Access Denied**
+   - Confirm the repository name is correct and in the format `owner/repo`.
+   - Ensure your token has access to the specified repository.
+   - For private repositories, verify your token has the `repo` scope.
+
+### Data and Rate Limiting Issues
+
+3. **No PRs Within Day Limit**
+   - Verify that the repository has recent PR activity.
+   - Try increasing the `--days` parameter.
+
+4. **Rate Limit Exceeded**
+   - Wait for the rate limit to reset (usually 1 hour).
+   - Use a personal access token instead of unauthenticated access.
+   - For high-volume use, consider using a GitHub Apps token with higher rate limits.
+
+5. **Large Repository Performance**
+   - For repositories with many PRs, try reducing the time range.
+   - Be patient, as processing may take longer for larger datasets.
+
+### Network and Environment Issues
+
+6. **Network Connectivity Problems**
+   - Check your internet connection.
+   - Verify any firewall or proxy settings aren't blocking access to GitHub.
+   - Ensure GitHub is accessible from your network.
+
+7. **Timezone Discrepancies**
+   - The script uses your system's timezone. Ensure it's set correctly.
+   - You can check your system time and timezone settings if dates seem off.
+
+### Docker and Dependency Issues
+
+8. **Docker Build or Run Failures**
+   - Ensure Docker is installed and running correctly.
+   - Try rebuilding the image: `docker build -t github-pr-report .`
+   - Check Docker logs: `docker logs <container_id>`
+
+9. **Gem Installation Problems**
+   - If running outside Docker, ensure you have Ruby and Bundler installed.
+   - Try updating gems: `bundle update`
+
+### Debugging
+
+10. **Using Debug Mode**
+    - Run the script with `--debug` for more detailed output.
+    - This can help identify issues with API calls or data processing.
+
+### Staying Updated
+
+11. **API Changes or Script Outdated**
+    - Ensure you're using the latest version of the script.
+    - Check for updates to the Octokit gem: `bundle update octokit`
+
+If you continue to experience issues after trying these solutions, please open an issue on the GitHub repository with details about the problem and any error messages you've received.
