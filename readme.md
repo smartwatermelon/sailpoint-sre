@@ -23,9 +23,9 @@ You can provide the GitHub token, repository, and number of days to look back in
 
 ### Environment Variables
 
-- `GITHUB_TOKEN` or `PR_REPORT_TOKEN`: GitHub Token
-- `GITHUB_REPO` or `PR_REPORT_REPO`: GitHub Repository
-- `DAYS_AGO`: Number of days to look back
+- `PR_REPORT_TOKEN`: GitHub Token
+- `PR_REPORT_REPO`: GitHub Repository
+- `PR_REPORT_DAYS_AGO`: Number of days to look back
 
 ### .env File
 
@@ -34,7 +34,7 @@ Create a `.env` file in the same directory as the script with the following cont
 ```
 PR_REPORT_TOKEN=your_github_token_here
 PR_REPORT_REPO=owner/repo
-DAYS_AGO=7
+PR_REPORT_DAYS_AGO=7
 ```
 
 ## Setup

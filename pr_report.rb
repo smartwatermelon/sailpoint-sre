@@ -18,9 +18,9 @@ end.parse!
 Dotenv.load('.env')
 
 # Configuration with priority order
-GITHUB_TOKEN = options[:token] || ENV['GITHUB_TOKEN'] || ENV['PR_REPORT_TOKEN']
-REPO = options[:repo] || ENV['PR_REPORT_REPO'] || ENV['GITHUB_REPO']
-DAYS_AGO = options[:days] || (ENV['DAYS_AGO'] || 7).to_i
+GITHUB_TOKEN = options[:token] || ENV['PR_REPORT_TOKEN']
+REPO = options[:repo] || ENV['PR_REPORT_REPO']
+DAYS_AGO = options[:days] || (ENV['PR_REPORT_DAYS_AGO'] || 7).to_i
 
 # Validate required configuration
 if GITHUB_TOKEN.nil? || REPO.nil?

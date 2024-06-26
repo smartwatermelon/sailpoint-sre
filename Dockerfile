@@ -14,9 +14,9 @@ RUN bundle install
 COPY pr_report.rb .env* ./
 
 # Declare the environment variables
-ENV GITHUB_TOKEN=""
+ENV PR_REPORT_TOKEN=""
 ENV PR_REPORT_REPO=""
-ENV DAYS_AGO=""
+ENV PR_REPORT_DAYS_AGO=""
 
 # Run the script when the container launches
 ENTRYPOINT ["ruby", "pr_report.rb"]
