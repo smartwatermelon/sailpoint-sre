@@ -13,10 +13,5 @@ RUN bundle install
 # Copy the rest of your app's source code from your host to your image filesystem.
 COPY pr_report.rb .env* ./
 
-# Declare the environment variables
-ENV PR_REPORT_TOKEN=""
-ENV PR_REPORT_REPO=""
-ENV PR_REPORT_DAYS_AGO=""
-
 # Run the script when the container launches
 ENTRYPOINT ["ruby", "pr_report.rb"]
