@@ -1,17 +1,26 @@
 # Use an official Ruby runtime as a parent image
 FROM ruby:3.0-slim
 
+# Install necessary system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+ && rm -rf /var/lib/apt/lists/*
+
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the Gemfile and Gemfile.lock (if it exists)
+# Copy the Gemfile and Gemfile.lock
 COPY Gemfile Gemfile.lock* ./
 
-# Install any needed packages specified in Gemfile
-RUN bundle install
+# Install dependencies including development and test gems
+RUN bundle install --jobs 4 --retry 3
 
-# Copy the rest of the app's source code from your host to the image filesystem.
-COPY pr_report.rb .env* ./
+# Copy the rest of the app's source code from the host to the image filesystem.
+COPY . .
 
-# Run the script when the container launches
+# Run the tests
+RUN bundle exec rspec
+
+# If tests pass, set the entrypoint
 ENTRYPOINT ["ruby", "pr_report.rb"]
