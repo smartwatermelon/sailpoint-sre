@@ -5,6 +5,7 @@ set -o pipefail
 TOKEN=""
 REPO=""
 DAYS=""
+DEBUG=""
 
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
@@ -21,6 +22,10 @@ while [[ $# -gt 0 ]]; do
       DAYS="${1#*=}"
       shift
       ;;
+	--debug)
+	  DEBUG="--debug"
+	  shift
+	  ;;
     *)
       echo "Unknown parameter: $1"
       exit 1
@@ -39,4 +44,4 @@ DAYS_ARG=${DAYS:+"--days=$DAYS"}
 DAYS_ARG=${DAYS_ARG:-${PR_REPORT_DAYS_AGO:+"--days=$PR_REPORT_DAYS_AGO"}}
 
 # Run the Docker container
-docker run --rm -e PR_REPORT_TOKEN -e PR_REPORT_REPO -e PR_REPORT_DAYS_AGO -v "$(pwd)/.env:/app/.env" github-pr-report $TOKEN_ARG $REPO_ARG $DAYS_ARG
+docker run --rm -e PR_REPORT_TOKEN -e PR_REPORT_REPO -e PR_REPORT_DAYS_AGO -v "$(pwd)/.env:/app/.env" github-pr-report $TOKEN_ARG $REPO_ARG $DAYS_ARG $DEBUG
