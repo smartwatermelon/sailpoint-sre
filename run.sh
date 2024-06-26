@@ -1,4 +1,5 @@
-#!/usr/bin/env bash -ex
+#!/usr/bin/env bash -eu
+set -o pipefail
 
 # Initialize variables
 TOKEN=""

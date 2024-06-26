@@ -24,21 +24,38 @@ OptionParser.new do |opts|
   opts.on('-r', '--repo REPO', 'GitHub Repository') { |v| options[:repo] = v }
   opts.on('-d', '--days DAYS', Integer, 'Number of days to look back') { |v| options[:days] = v }
   opts.on('-c', '--config FILE', 'Config file path') { |v| options[:config] = v }
+  opts.on('--debug', 'Enable debug output') { |v| options[:debug] = true }
 end.parse!
+
+DEBUG = options[:debug]
 
 # Load config file if specified
 config_file = options[:config] || '.env'
 file_config = load_config(config_file)
+
+puts "Loaded config from file: #{config_file}" if DEBUG
+puts "File config: #{file_config}" if DEBUG
 
 # Configuration with priority order: command line > environment variables > config file
 GITHUB_TOKEN = options[:token] || ENV['PR_REPORT_TOKEN'] || file_config['PR_REPORT_TOKEN']
 REPO = options[:repo] || ENV['PR_REPORT_REPO'] || file_config['PR_REPORT_REPO']
 DAYS_AGO = (options[:days] || ENV['PR_REPORT_DAYS_AGO'] || file_config['PR_REPORT_DAYS_AGO'] || 7).to_i
 
+if DEBUG
+  puts "Configuration sources:"
+  puts "  Command line options: #{options}"
+  puts "  Environment variables: PR_REPORT_TOKEN=#{ENV['PR_REPORT_TOKEN'] ? '[REDACTED]' : 'Not set'}, PR_REPORT_REPO=#{ENV['PR_REPORT_REPO']}, PR_REPORT_DAYS_AGO=#{ENV['PR_REPORT_DAYS_AGO']}"
+  puts "  File config: #{file_config}"
+  puts "\nFinal configuration:"
+  puts "  GITHUB_TOKEN: #{GITHUB_TOKEN ? '[REDACTED]' : 'Not set'}"
+  puts "  REPO: #{REPO || 'Not set'}"
+  puts "  DAYS_AGO: #{DAYS_AGO}"
+end
+
 # Validate required configuration
 errors = []
-errors << "GitHub token is missing. Please provide it via -t option, PR_REPORT_TOKEN env var, or in config file." if GITHUB_TOKEN.nil?
-errors << "GitHub repository is missing. Please provide it via -r option, PR_REPORT_REPO env var, or in config file." if REPO.nil?
+errors << "GitHub token is missing. Please provide it via --token option, PR_REPORT_TOKEN env var, or in config file." if GITHUB_TOKEN.nil?
+errors << "GitHub repository is missing. Please provide it via --repo option, PR_REPORT_REPO env var, or in config file." if REPO.nil?
 errors << "Repository must be in the format 'owner/repo'." if REPO && !REPO.include?('/')
 
 if errors.any?
@@ -47,16 +64,13 @@ if errors.any?
   exit 1
 end
 
-puts "Token: #{GITHUB_TOKEN ? '[REDACTED]' : 'Not set'}"
-puts "Repo: #{REPO || 'Not set'}"
-puts "Days Ago: #{DAYS_AGO}"
-
 # Initialize GitHub client
 client = Octokit::Client.new(access_token: GITHUB_TOKEN)
 
 # Verify the token and repository
 begin
-  client.repository(REPO)
+  repo_info = client.repository(REPO)
+  puts "Successfully connected to repository: #{repo_info.full_name}" if DEBUG
 rescue Octokit::Unauthorized
   puts "Error: The provided GitHub token is invalid or lacks necessary permissions."
   exit 1
