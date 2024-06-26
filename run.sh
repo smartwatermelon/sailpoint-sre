@@ -1,10 +1,10 @@
-#!/usr/bin/env bash
+#!/usr/bin/env bash -ex
 
 # Collect all environment variables starting with PR_REPORT_
 env_vars=$(env | grep '^PR_REPORT_' | awk -F= '{print "-e", $1}')
 
 # Use command line arguments if provided, otherwise use environment variables
-TOKEN_ARG=${PR_REPORT_DAYS_AGO:+"--token=$PR_REPORT_DAYS_AGO"}
+TOKEN_ARG=${PR_REPORT_TOKEN:+"--token=$PR_REPORT_TOKEN"}
 REPO_ARG=${PR_REPORT_REPO:+"--repo=$PR_REPORT_REPO"}
 DAYS_ARG=${PR_REPORT_DAYS_AGO:+"--days=$PR_REPORT_DAYS_AGO"}
 
