@@ -13,13 +13,14 @@ You can provide the GitHub token, repository, and number of days to look back in
 
 1. Command line arguments
 2. Environment variables
-3. .env file in the same directory as the script
+3. Config file
 
 ### Command Line Arguments
 
 - `--token` or `-t`: GitHub Token
 - `--repo` or `-r`: GitHub Repository (owner/repo)
 - `--days` or `-d`: Number of days to look back (default: 7)
+- `--config` or `-c`: Config file path (default .env)
 
 ### Environment Variables
 
@@ -36,7 +37,6 @@ PR_REPORT_TOKEN=your_github_token_here
 PR_REPORT_REPO=owner/repo
 PR_REPORT_DAYS_AGO=7
 ```
-**Note: At least one of the above methods must be used to provide parameters.**
 
 ## Setup
 
@@ -55,7 +55,7 @@ PR_REPORT_DAYS_AGO=7
 Run the container using the provided script:
 
 ```
-./run.sh
+./run.sh [--repo=REPO_NAME] [--token=TOKEN] [--days=DAYS_AGO]
 ```
 
 Or run it directly with Docker, providing arguments as needed:

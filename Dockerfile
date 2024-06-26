@@ -10,8 +10,11 @@ COPY Gemfile Gemfile.lock* ./
 # Install any needed packages specified in Gemfile
 RUN bundle install
 
-# Copy the rest of your app's source code from your host to your image filesystem.
+# Copy the rest of the app's source code from your host to the image filesystem.
 COPY pr_report.rb .env* ./
+
+# Output file structure during build
+RUN echo "File structure:" && ls -R /app
 
 # Run the script when the container launches
 ENTRYPOINT ["ruby", "pr_report.rb"]

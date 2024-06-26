@@ -2,7 +2,19 @@
 require 'octokit'
 require 'date'
 require 'optparse'
-require 'dotenv'
+
+def load_config(file_path)
+  config = {}
+  if File.exist?(file_path)
+    File.foreach(file_path) do |line|
+      line.strip!
+      next if line.empty? || line.start_with?('#')
+      key, value = line.split('=', 2)
+      config[key.strip] = value.strip
+    end
+  end
+  config
+end
 
 # Parse command line arguments
 options = {}
@@ -11,20 +23,22 @@ OptionParser.new do |opts|
   opts.on('-t', '--token TOKEN', 'GitHub Token') { |v| options[:token] = v }
   opts.on('-r', '--repo REPO', 'GitHub Repository') { |v| options[:repo] = v }
   opts.on('-d', '--days DAYS', Integer, 'Number of days to look back') { |v| options[:days] = v }
+  opts.on('-c', '--config FILE', 'Config file path') { |v| options[:config] = v }
 end.parse!
 
-# Load .env file if it exists
-Dotenv.load('.env')
+# Load config file if specified
+config_file = options[:config] || '.env'
+file_config = load_config(config_file)
 
-# Configuration with priority order
-GITHUB_TOKEN = options[:token] || ENV['PR_REPORT_TOKEN']
-REPO = options[:repo] || ENV['PR_REPORT_REPO']
-DAYS_AGO = options[:days] || (ENV['PR_REPORT_DAYS_AGO'] || 7).to_i
+# Configuration with priority order: command line > environment variables > config file
+GITHUB_TOKEN = options[:token] || ENV['PR_REPORT_TOKEN'] || file_config['PR_REPORT_TOKEN']
+REPO = options[:repo] || ENV['PR_REPORT_REPO'] || file_config['PR_REPORT_REPO']
+DAYS_AGO = (options[:days] || ENV['PR_REPORT_DAYS_AGO'] || file_config['PR_REPORT_DAYS_AGO'] || 7).to_i
 
 # Validate required configuration
 errors = []
-errors << "GitHub token is missing. Please provide it via -t option, PR_REPORT_TOKEN env var, or in .env file." if GITHUB_TOKEN.nil?
-errors << "GitHub repository is missing. Please provide it via -r option, PR_REPORT_REPO env var, or in .env file." if REPO.nil?
+errors << "GitHub token is missing. Please provide it via -t option, PR_REPORT_TOKEN env var, or in config file." if GITHUB_TOKEN.nil?
+errors << "GitHub repository is missing. Please provide it via -r option, PR_REPORT_REPO env var, or in config file." if REPO.nil?
 errors << "Repository must be in the format 'owner/repo'." if REPO && !REPO.include?('/')
 
 if errors.any?
@@ -32,6 +46,10 @@ if errors.any?
   errors.each { |error| puts "- #{error}" }
   exit 1
 end
+
+puts "Token: #{GITHUB_TOKEN ? '[REDACTED]' : 'Not set'}"
+puts "Repo: #{REPO || 'Not set'}"
+puts "Days Ago: #{DAYS_AGO}"
 
 # Initialize GitHub client
 client = Octokit::Client.new(access_token: GITHUB_TOKEN)
@@ -47,8 +65,7 @@ rescue Octokit::NotFound
   exit 1
 end
 
-puts "Authentication successful. Generating report for #{REPO}..."
-
+puts "Authentication successful. Generating report for #{REPO} for the last #{DAYS_AGO} days..."
 
 # Get pull requests from the specified time range
 start_date = (Date.today - DAYS_AGO).to_time
