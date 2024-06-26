@@ -65,7 +65,7 @@ if errors.any?
   exit 1
 end
 
-# Initialize GitHub client with retry logic
+# Initialize GitHub client with timeout settings
 client = Octokit::Client.new(access_token: GITHUB_TOKEN, connection_options: {request: {open_timeout: 1, timeout: 1}})
 client.auto_paginate = true  # Ensure we get all results
 
@@ -132,27 +132,41 @@ begin
   puts report
 
 rescue Octokit::Unauthorized
-  puts "Error: The provided GitHub token is invalid or lacks necessary permissions."
+  puts "Error: The provided GitHub token is invalid or has expired."
+  puts "Please check your token and ensure it has the necessary permissions."
+  puts "You can create a new token at: https://github.com/settings/tokens"
   exit 1
 rescue Octokit::NotFound
-  puts "Error: The specified repository '#{REPO}' was not found or is not accessible with the provided token."
+  puts "Error: The specified repository '#{REPO}' was not found."
+  puts "Please check the repository name and ensure it is in the format 'owner/repo'."
+  puts "Also, verify that your token has access to this repository."
+  exit 1
+rescue Octokit::Forbidden
+  puts "Error: Access to the repository '#{REPO}' is forbidden."
+  puts "Please check that your token has the necessary permissions to access this repository."
+  puts "For public repositories, you need at least 'public_repo' scope."
   exit 1
 rescue Octokit::TooManyRequests
-  puts "Error: GitHub API rate limit exceeded. Please wait and try again later."
+  puts "Error: GitHub API rate limit exceeded."
+  puts "Please wait for a while before trying again, or use a token with higher rate limits."
   exit 1
 rescue Octokit::Error => e
   puts "An error occurred while interacting with the GitHub API: #{e.message}"
+  puts "If this persists, please check your token permissions and the repository settings."
   exit 1
 rescue Faraday::ConnectionFailed, Faraday::TimeoutError => e
-  puts "Network error: Unable to connect to GitHub. Please check your internet connection and try again."
-  puts "Error details: #{e.message}"
+  puts "Network error: Unable to connect to GitHub."
+  puts "Please check your internet connection and try again."
+  puts "If the problem persists, GitHub may be experiencing issues."
   exit 1
 rescue JSON::ParserError => e
-  puts "Error: Received invalid data from GitHub API. The response couldn't be parsed."
-  puts "Error details: #{e.message}"
+  puts "Error: Received invalid data from GitHub API."
+  puts "This could be due to a temporary issue with GitHub's servers."
+  puts "Please try again later. If the problem persists, contact GitHub support."
   exit 1
 rescue StandardError => e
   puts "An unexpected error occurred: #{e.message}"
+  puts "Please try again. If the problem persists, contact the script maintainer."
   puts e.backtrace if DEBUG
   exit 1
 end
