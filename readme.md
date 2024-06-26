@@ -39,6 +39,11 @@ DAYS_AGO=7
 
 ## Setup
 
+0. Install Docker:
+   ```
+   brew install docker --cask
+   ```
+
 1. Build the Docker image:
    ```
    docker build -t github-pr-report .
