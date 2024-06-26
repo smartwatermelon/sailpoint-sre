@@ -15,19 +15,19 @@ You can provide the GitHub token, repository, and number of days to look back in
 2. Environment variables
 3. .env file in the same directory as the script
 
-### Command Line Arguments (Optional)
+### Command Line Arguments
 
 - `--token` or `-t`: GitHub Token
 - `--repo` or `-r`: GitHub Repository (owner/repo)
-- `--days` or `-d`: Number of days to look back (defaults to 7 days)
+- `--days` or `-d`: Number of days to look back (default: 7)
 
-### Environment Variables (Optional)
+### Environment Variables
 
 - `PR_REPORT_TOKEN`: GitHub Token
 - `PR_REPORT_REPO`: GitHub Repository
-- `PR_REPORT_DAYS_AGO`: Number of days to look back
+- `PR_REPORT_DAYS_AGO`: Number of days to look back (default: 7)
 
-### .env File (Optional)
+### .env File
 
 Create a `.env` file in the same directory as the script with the following content:
 
@@ -36,8 +36,7 @@ PR_REPORT_TOKEN=your_github_token_here
 PR_REPORT_REPO=owner/repo
 PR_REPORT_DAYS_AGO=7
 ```
-
-*If the required parameters are not provided on the command line, environment variables, or .env file, you will be prompted during script run.*
+**Note: At least one of the above methods must be used to provide parameters.**
 
 ## Setup
 
