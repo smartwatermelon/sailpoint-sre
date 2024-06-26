@@ -66,8 +66,8 @@ if errors.any?
 end
 
 # Initialize GitHub client with timeout settings
-client = Octokit::Client.new(access_token: GITHUB_TOKEN, connection_options: {request: {open_timeout: 1, timeout: 1}})
-client.auto_paginate = true  # Ensure we get all results
+client = Octokit::Client.new(access_token: GITHUB_TOKEN, connection_options: {request: {open_timeout: 5, timeout: 5}})
+client.auto_paginate = true  # Automatically handle pagination
 
 def handle_rate_limit(client)
   rate_limit = client.rate_limit
@@ -81,22 +81,18 @@ end
 
 begin
   # Verify the token and repository
+  puts "Connecting to GitHub and verifying repository..."
   repo_info = client.repository(REPO)
   puts "Successfully connected to repository: #{repo_info.full_name}" if DEBUG
 
   # Get pull requests from the specified time range
   start_date = (Date.today - DAYS_AGO).to_time
-  pulls = []
+  puts "Fetching pull requests for the last #{DAYS_AGO} #{DAYS_AGO == 1 ? 'day' : 'days'}..."
+  handle_rate_limit(client)
+  pulls = client.pull_requests(REPO, state: 'all')
   
-  begin
-    handle_rate_limit(client)
-    pulls = client.pull_requests(REPO, state: 'all')
-  rescue Octokit::TooManyRequests
-    handle_rate_limit(client)
-    retry
-  end
-
   recent_pulls = pulls.select { |pr| pr.created_at >= start_date }
+  puts "Processing #{recent_pulls.size} pull requests from the last #{DAYS_AGO} #{DAYS_AGO == 1 ? 'day' : 'days'}..."
 
   # Categorize pull requests
   opened = recent_pulls.select { |pr| pr.state == 'open' }
@@ -107,11 +103,11 @@ begin
   report = <<~EMAIL
     From: pr-report@example.com
     To: manager@example.com
-    Subject: Pull Request Summary for #{REPO} (Last #{DAYS_AGO} Days)
+    Subject: Pull Request Summary for #{REPO} (Last #{DAYS_AGO} #{DAYS_AGO == 1 ? 'Day' : 'Days'})
 
     Hello,
 
-    Here's a summary of pull request activity in the #{REPO} repository for the past #{DAYS_AGO} days:
+    Here's a summary of pull request activity in the #{REPO} repository for the past #{DAYS_AGO} #{DAYS_AGO == 1 ? 'day' : 'days'}:
 
     Opened PRs (#{opened.count}):
     #{opened.map { |pr| "- #{pr.title}" }.join("\n")}
@@ -138,7 +134,7 @@ rescue Octokit::Unauthorized
   exit 1
 rescue Octokit::NotFound
   puts "Error: The specified repository '#{REPO}' was not found."
-  puts "Please check the repository name and ensure it is in the format 'owner/repo'."
+  puts "Please check the repository name and ensure it's in the format 'owner/repo'."
   puts "Also, verify that your token has access to this repository."
   exit 1
 rescue Octokit::Forbidden
