@@ -1,5 +1,5 @@
-#!/usr/bin/env bash -eu
-set -o pipefail
+#!/usr/bin/env bash
+set -euo pipefail
 
 # Initialize variables
 TOKEN=""
@@ -22,10 +22,10 @@ while [[ $# -gt 0 ]]; do
       DAYS="${1#*=}"
       shift
       ;;
-	--debug)
-	  DEBUG="--debug"
-	  shift
-	  ;;
+    --debug)
+      DEBUG="--debug"
+      shift
+      ;;
     *)
       echo "Unknown parameter: $1"
       exit 1
@@ -33,7 +33,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Set arguments based on priority: command line > environment variables
+# Set arguments based on priority: command line > environment variables > .env file
 TOKEN_ARG=${TOKEN:+"--token=$TOKEN"}
 TOKEN_ARG=${TOKEN_ARG:-${PR_REPORT_TOKEN:+"--token=$PR_REPORT_TOKEN"}}
 
@@ -44,4 +44,10 @@ DAYS_ARG=${DAYS:+"--days=$DAYS"}
 DAYS_ARG=${DAYS_ARG:-${PR_REPORT_DAYS_AGO:+"--days=$PR_REPORT_DAYS_AGO"}}
 
 # Run the Docker container
-docker run --rm -e PR_REPORT_TOKEN -e PR_REPORT_REPO -e PR_REPORT_DAYS_AGO -v "$(pwd)/.env:/app/.env" github-pr-report $TOKEN_ARG $REPO_ARG $DAYS_ARG $DEBUG
+docker run --rm \
+  -e PR_REPORT_TOKEN \
+  -e PR_REPORT_REPO \
+  -e PR_REPORT_DAYS_AGO \
+  -v "$(pwd)/.env:/app/.env" \
+  github-pr-report \
+  $TOKEN_ARG $REPO_ARG $DAYS_ARG $DEBUG
