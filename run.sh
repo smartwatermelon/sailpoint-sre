@@ -43,7 +43,15 @@ REPO_ARG=${REPO_ARG:-${PR_REPORT_REPO:+"--repo=$PR_REPORT_REPO"}}
 DAYS_ARG=${DAYS:+"--days=$DAYS"}
 DAYS_ARG=${DAYS_ARG:-${PR_REPORT_DAYS_AGO:+"--days=$PR_REPORT_DAYS_AGO"}}
 
+# Create an empty .env file if one doesn't already exist
+touch .env
+
 # Run the Docker container
+# - Remove the container after it exits (--rm)
+# - Pass environment variables (-e)
+# - Mount the .env file as a volume (-v)
+# - Use the github-pr-report image
+# - Pass command-line arguments
 docker run --rm \
   -e PR_REPORT_TOKEN \
   -e PR_REPORT_REPO \

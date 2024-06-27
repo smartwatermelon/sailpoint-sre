@@ -7,10 +7,13 @@ RSpec.describe PRReport do
   let(:days_ago) { 7 }
   let(:pr_report) { PRReport.new(token, repo, days_ago) }
 
+  # Stub API responses
   before do
+    # Stub repository verification request
     stub_request(:get, "https://api.github.com/repos/#{repo}")
       .to_return(status: 200, body: '{"full_name": "fake_owner/fake_repo"}', headers: {'Content-Type' => 'application/json'})
 
+    # Stub pull requests fetch request
     stub_request(:get, "https://api.github.com/repos/#{repo}/pulls?per_page=100&state=all")
       .to_return(status: 200, body: [
         {
@@ -73,9 +76,18 @@ RSpec.describe PRReport do
   describe '#generate_report' do
     let(:report) { pr_report.generate_report }
 
-	it "prints a progress message" do
-	  expect { pr_report.generate_report }.to output("Fetching pull requests... (3 found)\n").to_stdout
-	end
+    it 'displays progress messages' do
+      expected_output = [
+        "Verifying repository... Done!\n",
+        "Fetching pull requests... Done!\n",
+        "Fetching pull requests... (3 found) Done!\n",
+        "Filtering recent pull requests... Done!\n",
+        "Categorizing pull requests... Done!\n",
+        "Generating report... Done!\n"
+      ].join
+
+      expect { report }.to output(expected_output).to_stdout
+    end
 
     it 'generates a report with correct PR counts' do
       expect(report).to include("Opened PRs (1):")
@@ -97,9 +109,9 @@ RSpec.describe PRReport do
       expect(report).to include("Status: Closed")
       expect(report).to include("Status: Merged")
     end
-
   end
 
+  # Test error handling scenarios
   context 'when rate limited' do
     before do
       stub_request(:get, "https://api.github.com/repos/#{repo}")
@@ -135,4 +147,6 @@ RSpec.describe PRReport do
       expect { pr_report.generate_report }.to raise_error(RuntimeError, /Error verifying repository/)
     end
   end
+
+  # Add more error scenarios as needed
 end
