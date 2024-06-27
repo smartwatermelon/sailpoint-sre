@@ -14,21 +14,67 @@ RSpec.describe PRReport do
     stub_request(:get, "https://api.github.com/repos/#{repo}/pulls?per_page=100&state=all")
       .to_return(status: 200, body: [
         {
+          "number": 1,
           "state": "open",
           "title": "Open PR",
-          "created_at": (Date.today - 3).iso8601
+          "html_url": "https://github.com/fake_owner/fake_repo/pull/1",
+          "user": {
+            "login": "user1",
+            "name": "User One",
+            "email": "user1@example.com"
+          },
+          "created_at": (Date.today - 3).iso8601,
+          "updated_at": (Date.today - 2).iso8601,
+          "closed_at": nil,
+          "merged_at": nil,
+          "comments": 5,
+          "commits": 3,
+          "additions": 100,
+          "deletions": 50,
+          "changed_files": 3,
+          "labels": [{"name": "enhancement"}]
         },
         {
+          "number": 2,
           "state": "closed",
           "title": "Closed PR",
+          "html_url": "https://github.com/fake_owner/fake_repo/pull/2",
+          "user": {
+            "login": "user2",
+            "name": "User Two",
+            "email": "user2@example.com"
+          },
           "created_at": (Date.today - 5).iso8601,
-          "merged_at": nil
+          "updated_at": (Date.today - 1).iso8601,
+          "closed_at": (Date.today - 1).iso8601,
+          "merged_at": nil,
+          "comments": 2,
+          "commits": 1,
+          "additions": 10,
+          "deletions": 5,
+          "changed_files": 1,
+          "labels": []
         },
         {
+          "number": 3,
           "state": "closed",
           "title": "Merged PR",
+          "html_url": "https://github.com/fake_owner/fake_repo/pull/3",
+          "user": {
+            "login": "user3",
+            "name": "User Three",
+            "email": "user3@example.com"
+          },
           "created_at": (Date.today - 4).iso8601,
-          "merged_at": (Date.today - 3).iso8601
+          "updated_at": (Date.today - 1).iso8601,
+          "closed_at": (Date.today - 1).iso8601,
+          "merged_at": (Date.today - 1).iso8601,
+          "comments": 3,
+          "commits": 2,
+          "additions": 50,
+          "deletions": 20,
+          "changed_files": 2,
+          "labels": [{"name": "bug"}, {"name": "priority"}]
         }
       ].to_json, headers: {'Content-Type' => 'application/json'})
   end
@@ -40,12 +86,34 @@ RSpec.describe PRReport do
   end
 
   describe '#generate_report' do
+    let(:report) { pr_report.generate_report }
+
     it 'generates a report with correct PR counts' do
-      report = pr_report.generate_report
-      expect(report[:opened].count).to eq(1)
-      expect(report[:closed].count).to eq(1)
-      expect(report[:merged].count).to eq(1)
+      expect(report).to include("Opened PRs (1):")
+      expect(report).to include("Closed PRs (1):")
+      expect(report).to include("Merged PRs (1):")
+      expect(report).to include("Total PRs: 3")
     end
+
+    it 'includes detailed information for each PR' do
+      expect(report).to include("Title: Open PR")
+      expect(report).to include("Number: #1")
+      expect(report).to include("URL: https://github.com/fake_owner/fake_repo/pull/1")
+      expect(report).to include("Submitter: User One (user1@example.com)")
+      expect(report).to include("Status: Opened")
+      expect(report).to include("Comments: 5")
+      expect(report).to include("Commits: 3")
+      expect(report).to include("Changed Files: 3")
+      expect(report).to include("Additions: 100")
+      expect(report).to include("Deletions: 50")
+      expect(report).to include("Labels: enhancement")
+    end
+
+    it 'shows correct status for closed and merged PRs' do
+      expect(report).to include("Status: Closed")
+      expect(report).to include("Status: Merged")
+    end
+
   end
 
   context 'when rate limited' do

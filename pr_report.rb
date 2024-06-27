@@ -22,7 +22,8 @@ class PRReport
     verify_repository
     pulls = fetch_pull_requests
     recent_pulls = filter_recent_pulls(pulls)
-    categorize_pulls(recent_pulls)
+    categorized_pulls = categorize_pulls(recent_pulls)
+    format_report(categorized_pulls)
   end
 
   private
@@ -55,6 +56,52 @@ class PRReport
       merged: pulls.select { |pr| pr.merged_at }
     }
   end
+
+  def format_report(categorized_pulls)
+    report = "Pull Request Summary for #{@repo} (Last #{@days_ago} #{@days_ago == 1 ? 'day' : 'days'}):\n\n"
+
+    %i[opened closed merged].each do |category|
+      prs = categorized_pulls[category]
+      report += "#{category.to_s.capitalize} PRs (#{prs.count}):\n"
+      prs.each do |pr|
+        report += format_pr_details(pr, category)
+      end
+      report += "\n"
+    end
+
+    report += "Total PRs: #{categorized_pulls.values.sum(&:count)}\n"
+    report
+  end
+
+  def format_pr_details(pr, category)
+    submitted_at = pr.created_at.strftime("%Y-%m-%d %H:%M:%S UTC")
+    status = case category
+             when :opened then "Opened"
+             when :closed then "Closed"
+             when :merged then "Merged"
+             end
+    status_date = case category
+                  when :opened then submitted_at
+                  when :closed then pr.closed_at&.strftime("%Y-%m-%d %H:%M:%S UTC")
+                  when :merged then pr.merged_at&.strftime("%Y-%m-%d %H:%M:%S UTC")
+                  end
+    details = <<~DETAILS
+      - Title: #{pr.title}
+        Number: ##{pr.number}
+        URL: #{pr.html_url}
+        Submitter: #{pr.user.name || pr.user.login} (#{pr.user.email || 'Email not available'})
+        Submitted at: #{submitted_at}
+        Status: #{status} at #{status_date}
+        Comments: #{pr.comments}
+        Commits: #{pr.commits}
+        Changed Files: #{pr.changed_files}
+        Additions: #{pr.additions}
+        Deletions: #{pr.deletions}
+    DETAILS
+    details += "        Labels: #{pr.labels.map(&:name).join(', ')}\n" if pr.labels.any?
+    details += "\n"
+    details
+  end
 end
 
 if __FILE__ == $0
@@ -83,18 +130,8 @@ if __FILE__ == $0
     raise ArgumentError, "Repository is required. Set it with --repo or in .env file." if repo.nil? || repo.empty?
 
     report = PRReport.new(token, repo, days_ago).generate_report
-    puts "Pull Request Summary for #{repo} (Last #{days_ago} #{days_ago == 1 ? 'day' : 'days'}):"
-    puts
-    puts "Opened PRs (#{report[:opened].count}):"
-    report[:opened].each { |pr| puts "- #{pr.title}" }
-    puts
-    puts "Closed PRs (#{report[:closed].count}):"
-    report[:closed].each { |pr| puts "- #{pr.title}" }
-    puts
-    puts "Merged PRs (#{report[:merged].count}):"
-    report[:merged].each { |pr| puts "- #{pr.title}" }
-    puts
-    puts "Total PRs: #{report.values.sum(&:count)}"
+    puts report
+
 	rescue Octokit::Unauthorized
 	  puts "Error: The provided GitHub token is invalid or has expired."
 	  puts "Please check your token and ensure it has the necessary permissions."
@@ -131,7 +168,7 @@ if __FILE__ == $0
 	rescue StandardError => e
 	  puts "An unexpected error occurred: #{e.message}"
 	  puts "Please try again. If the problem persists, contact the script maintainer."
-	  puts e.backtrace if DEBUG
+	  puts e.backtrace if debug
 	  exit 1
 	end
 end
