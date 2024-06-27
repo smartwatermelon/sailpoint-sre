@@ -20,7 +20,6 @@ You can provide the GitHub token, repository, and number of days to look back in
 - `--token` or `-t`: GitHub Token
 - `--repo` or `-r`: GitHub Repository (owner/repo)
 - `--days` or `-d`: Number of days to look back (default: 7)
-- `--config` or `-c`: Config file path (default .env)
 - `--debug`: Print various debug messages to help with token or repo issues
 
 ### Environment Variables
