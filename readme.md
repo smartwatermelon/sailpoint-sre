@@ -56,13 +56,13 @@ PR_REPORT_DAYS_AGO=7
 Run the container using the provided script:
 
 ```
-./run.sh [--repo=REPO_NAME] [--token=TOKEN] [--days=DAYS_AGO]
+./run.sh [--repo=REPO_NAME] [--token=TOKEN] [--days=DAYS_AGO] [--debug]
 ```
 
 Or run it directly with Docker, providing arguments as needed:
 
 ```
-docker run --rm -v "$(pwd)/.env:/app/.env" github-pr-report --token=your_token --repo=owner/repo --days=7
+docker run --rm -v "$(pwd)/.env:/app/.env" github-pr-report --token=your_token --repo=owner/repo --days=7 --debug
 ```
 
 **The report will be printed to the console.**
