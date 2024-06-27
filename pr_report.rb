@@ -2,132 +2,99 @@
 require 'octokit'
 require 'date'
 require 'optparse'
-require 'faraday'
+require 'dotenv'
 
-def load_config(file_path)
-  config = {}
-  if File.exist?(file_path)
-    File.foreach(file_path) do |line|
-      line.strip!
-      next if line.empty? || line.start_with?('#')
-      key, value = line.split('=', 2)
-      config[key.strip] = value.strip
-    end
+# Load environment variables from .env file
+Dotenv.load
+
+class PRReport
+  attr_reader :client, :repo, :days_ago
+
+  def initialize(token, repo, days_ago)
+    @client = Octokit::Client.new(access_token: token, connection_options: {request: {open_timeout: 5, timeout: 5}})
+    @repo = repo
+    @days_ago = days_ago.to_i
+    @client.auto_paginate = true
+    validate_repo
   end
-  config
+
+  def generate_report
+    verify_repository
+    pulls = fetch_pull_requests
+    recent_pulls = filter_recent_pulls(pulls)
+    categorize_pulls(recent_pulls)
+  end
+
+  private
+
+  def validate_repo
+    raise ArgumentError, "Repository must be in the format 'owner/repo'" unless @repo && @repo.include?('/')
+  end
+
+  def verify_repository
+    @client.repository(@repo)
+  rescue Octokit::Error => e
+    raise "Error verifying repository: #{e.message}"
+  end
+
+  def fetch_pull_requests
+    @client.pull_requests(@repo, state: 'all', per_page: 100)
+  rescue Octokit::Error => e
+    raise "Error fetching pull requests: #{e.message}"
+  end
+
+  def filter_recent_pulls(pulls)
+    start_date = (Date.today - @days_ago).to_time
+    pulls.select { |pr| pr.created_at >= start_date }
+  end
+
+  def categorize_pulls(pulls)
+    {
+      opened: pulls.select { |pr| pr.state == 'open' },
+      closed: pulls.select { |pr| pr.state == 'closed' && pr.merged_at.nil? },
+      merged: pulls.select { |pr| pr.merged_at }
+    }
+  end
 end
 
-# Parse command line arguments
-options = {}
-OptionParser.new do |opts|
-  opts.banner = "Usage: ruby pr_report.rb [options]"
-  opts.on('-t', '--token TOKEN', 'GitHub Token') { |v| options[:token] = v }
-  opts.on('-r', '--repo REPO', 'GitHub Repository') { |v| options[:repo] = v }
-  opts.on('-d', '--days DAYS', Integer, 'Number of days to look back') { |v| options[:days] = v }
-  opts.on('-c', '--config FILE', 'Config file path') { |v| options[:config] = v }
-  opts.on('--debug', 'Enable debug output') { |v| options[:debug] = true }
-end.parse!
+if __FILE__ == $0
+  options = {}
+  OptionParser.new do |opts|
+    opts.banner = "Usage: ruby pr_report.rb [options]"
+    opts.on('-t', '--token TOKEN', 'GitHub Token') { |v| options[:token] = v }
+    opts.on('-r', '--repo REPO', 'GitHub Repository') { |v| options[:repo] = v }
+    opts.on('-d', '--days DAYS', Integer, 'Number of days to look back') { |v| options[:days] = v }
+    opts.on('--debug', 'Enable debug output') { |v| options[:debug] = true }
+  end.parse!
 
-DEBUG = options[:debug]
+  token = options[:token] || ENV['PR_REPORT_TOKEN']
+  repo = options[:repo] || ENV['PR_REPORT_REPO']
+  days_ago = options[:days] || ENV['PR_REPORT_DAYS_AGO'] || 7
+  debug = options[:debug]
 
-# Load config file if specified
-config_file = options[:config] || '.env'
-file_config = load_config(config_file)
+  if debug
+    puts "Debug: Token = #{token ? '[REDACTED]' : 'Not set'}"
+    puts "Debug: Repo = #{repo || 'Not set'}"
+    puts "Debug: Days ago = #{days_ago}"
+  end
 
-puts "Loaded config from file: #{config_file}" if DEBUG
-puts "File config: #{file_config}" if DEBUG
+  begin
+    raise ArgumentError, "GitHub token is required. Set it with --token or in .env file." if token.nil? || token.empty?
+    raise ArgumentError, "Repository is required. Set it with --repo or in .env file." if repo.nil? || repo.empty?
 
-# Configuration with priority order: command line > environment variables > config file
-GITHUB_TOKEN = options[:token] || ENV['PR_REPORT_TOKEN'] || file_config['PR_REPORT_TOKEN']
-REPO = options[:repo] || ENV['PR_REPORT_REPO'] || file_config['PR_REPORT_REPO']
-DAYS_AGO = (options[:days] || ENV['PR_REPORT_DAYS_AGO'] || file_config['PR_REPORT_DAYS_AGO'] || 7).to_i
-
-if DEBUG
-  puts "Configuration sources:"
-  puts "  Command line options: #{options}"
-  puts "  Environment variables: PR_REPORT_TOKEN=#{ENV['PR_REPORT_TOKEN'] ? '[REDACTED]' : 'Not set'}, PR_REPORT_REPO=#{ENV['PR_REPORT_REPO']}, PR_REPORT_DAYS_AGO=#{ENV['PR_REPORT_DAYS_AGO']}"
-  puts "  File config: #{file_config}"
-  puts "\nFinal configuration:"
-  puts "  GITHUB_TOKEN: #{GITHUB_TOKEN ? '[REDACTED]' : 'Not set'}"
-  puts "  REPO: #{REPO || 'Not set'}"
-  puts "  DAYS_AGO: #{DAYS_AGO}"
-end
-
-# Validate required configuration
-errors = []
-errors << "GitHub token is missing. Please provide it via --token option, PR_REPORT_TOKEN env var, or in config file." if GITHUB_TOKEN.nil?
-errors << "GitHub repository is missing. Please provide it via --repo option, PR_REPORT_REPO env var, or in config file." if REPO.nil?
-errors << "Repository must be in the format 'owner/repo'." if REPO && !REPO.include?('/')
-
-if errors.any?
-  puts "Error(s) in configuration:"
-  errors.each { |error| puts "- #{error}" }
-  exit 1
-end
-
-def main
-	# Initialize GitHub client with timeout settings
-	client = Octokit::Client.new(access_token: GITHUB_TOKEN, connection_options: {request: {open_timeout: 5, timeout: 5}})
-	client.auto_paginate = true  # Automatically handle pagination
-	
-	def handle_rate_limit(client)
-	  rate_limit = client.rate_limit
-	  if rate_limit.remaining == 0
-		reset_time = Time.at(rate_limit.reset)
-		sleep_time = [rate_limit.reset - Time.now.to_i, 0].max
-		puts "Rate limit exceeded. Waiting for #{sleep_time} seconds until #{reset_time}."
-		sleep(sleep_time)
-	  end
-	end
-	
-	begin
-	  # Verify the token and repository
-	  puts "Connecting to GitHub and verifying repository..."
-	  repo_info = client.repository(REPO)
-	  puts "Successfully connected to repository: #{repo_info.full_name}" if DEBUG
-	
-	  # Get pull requests from the specified time range
-	  start_date = (Date.today - DAYS_AGO).to_time
-	  puts "Fetching pull requests for the last #{DAYS_AGO} #{DAYS_AGO == 1 ? 'day' : 'days'}..."
-	  handle_rate_limit(client)
-	  pulls = client.pull_requests(REPO, state: 'all')
-	  
-	  recent_pulls = pulls.select { |pr| pr.created_at >= start_date }
-	  puts "Processing #{recent_pulls.size} pull requests from the last #{DAYS_AGO} #{DAYS_AGO == 1 ? 'day' : 'days'}..."
-	
-	  # Categorize pull requests
-	  opened = recent_pulls.select { |pr| pr.state == 'open' }
-	  closed = recent_pulls.select { |pr| pr.state == 'closed' && pr.merged_at.nil? }
-	  merged = recent_pulls.select { |pr| pr.merged_at }
-	
-	  # Generate report
-	  report = <<~EMAIL
-		From: pr-report@example.com
-		To: manager@example.com
-		Subject: Pull Request Summary for #{REPO} (Last #{DAYS_AGO} #{DAYS_AGO == 1 ? 'Day' : 'Days'})
-	
-		Hello,
-	
-		Here's a summary of pull request activity in the #{REPO} repository for the past #{DAYS_AGO} #{DAYS_AGO == 1 ? 'day' : 'days'}:
-	
-		Opened PRs (#{opened.count}):
-		#{opened.map { |pr| "- #{pr.title}" }.join("\n")}
-	
-		Closed PRs (#{closed.count}):
-		#{closed.map { |pr| "- #{pr.title}" }.join("\n")}
-	
-		Merged PRs (#{merged.count}):
-		#{merged.map { |pr| "- #{pr.title}" }.join("\n")}
-	
-		Total PRs: #{recent_pulls.count}
-	
-		Best regards,
-		Your GitHub Reporter
-	  EMAIL
-	
-	  # Print the report
-	  puts report
-	
+    report = PRReport.new(token, repo, days_ago).generate_report
+    puts "Pull Request Summary for #{repo} (Last #{days_ago} #{days_ago == 1 ? 'day' : 'days'}):"
+    puts
+    puts "Opened PRs (#{report[:opened].count}):"
+    report[:opened].each { |pr| puts "- #{pr.title}" }
+    puts
+    puts "Closed PRs (#{report[:closed].count}):"
+    report[:closed].each { |pr| puts "- #{pr.title}" }
+    puts
+    puts "Merged PRs (#{report[:merged].count}):"
+    report[:merged].each { |pr| puts "- #{pr.title}" }
+    puts
+    puts "Total PRs: #{report.values.sum(&:count)}"
 	rescue Octokit::Unauthorized
 	  puts "Error: The provided GitHub token is invalid or has expired."
 	  puts "Please check your token and ensure it has the necessary permissions."
@@ -167,9 +134,4 @@ def main
 	  puts e.backtrace if DEBUG
 	  exit 1
 	end
-end
-
-# Only run the script if it's the main file being run
-if __FILE__ == $0
-  main
 end
