@@ -73,6 +73,10 @@ RSpec.describe PRReport do
   describe '#generate_report' do
     let(:report) { pr_report.generate_report }
 
+	it "prints a progress message" do
+	  expect { pr_report.generate_report }.to output("Fetching pull requests... (3 found)\n").to_stdout
+	end
+
     it 'generates a report with correct PR counts' do
       expect(report).to include("Opened PRs (1):")
       expect(report).to include("Closed PRs (1):")

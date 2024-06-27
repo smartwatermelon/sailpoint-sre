@@ -21,8 +21,9 @@ class PRReport
   def generate_report
     verify_repository
     pulls = fetch_pull_requests
-    recent_pulls = filter_recent_pulls(pulls)
-    categorized_pulls = categorize_pulls(recent_pulls)
+    puts "Fetching pull requests... (#{pulls.count} found)"
+	recent_pulls = filter_recent_pulls(pulls)
+	categorized_pulls = categorize_pulls(recent_pulls)
 	"From: your-email@example.com\n" +
 	"To: manager@example.com\n" +
 	"Subject: Weekly Pull Request Summary\n" +
