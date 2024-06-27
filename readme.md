@@ -80,6 +80,10 @@ Note: Make sure to adjust the path to your `.env` file and the Docker image name
 
 That's it! Your GitHub PR Report Generator is now scheduled to run daily.
 
+## Future Improvements
+* The script can take a while to run if there are a lot of PRs to sort through. I'd like to add a progress bar so it's obvious things are still happening.
+* The brief for this challenge was to output the report as if in an email, but not actually send it. I would add configuration for email parameters like To, From, and Subject.
+* I'd consider integrating with Slack, to send the daily update to a team channel, for example.
 
 ## Troubleshooting
 
