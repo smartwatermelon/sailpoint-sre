@@ -23,6 +23,10 @@ class PRReport
     pulls = fetch_pull_requests
     recent_pulls = filter_recent_pulls(pulls)
     categorized_pulls = categorize_pulls(recent_pulls)
+	"From: your-email@example.com\n" +
+	"To: manager@example.com\n" +
+	"Subject: Weekly Pull Request Summary\n" +
+	"Date: #{Time.now.strftime('%a, %d %b %Y %H:%M:%S %z')}\n\n" +
     format_report(categorized_pulls)
   end
 
@@ -92,11 +96,6 @@ class PRReport
         Submitter: #{pr.user.name || pr.user.login} (#{pr.user.email || 'Email not available'})
         Submitted at: #{submitted_at}
         Status: #{status} at #{status_date}
-        Comments: #{pr.comments}
-        Commits: #{pr.commits}
-        Changed Files: #{pr.changed_files}
-        Additions: #{pr.additions}
-        Deletions: #{pr.deletions}
     DETAILS
     details += "        Labels: #{pr.labels.map(&:name).join(', ')}\n" if pr.labels.any?
     details += "\n"

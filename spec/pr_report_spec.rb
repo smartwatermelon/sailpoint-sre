@@ -27,11 +27,6 @@ RSpec.describe PRReport do
           "updated_at": (Date.today - 2).iso8601,
           "closed_at": nil,
           "merged_at": nil,
-          "comments": 5,
-          "commits": 3,
-          "additions": 100,
-          "deletions": 50,
-          "changed_files": 3,
           "labels": [{"name": "enhancement"}]
         },
         {
@@ -48,11 +43,6 @@ RSpec.describe PRReport do
           "updated_at": (Date.today - 1).iso8601,
           "closed_at": (Date.today - 1).iso8601,
           "merged_at": nil,
-          "comments": 2,
-          "commits": 1,
-          "additions": 10,
-          "deletions": 5,
-          "changed_files": 1,
           "labels": []
         },
         {
@@ -69,11 +59,6 @@ RSpec.describe PRReport do
           "updated_at": (Date.today - 1).iso8601,
           "closed_at": (Date.today - 1).iso8601,
           "merged_at": (Date.today - 1).iso8601,
-          "comments": 3,
-          "commits": 2,
-          "additions": 50,
-          "deletions": 20,
-          "changed_files": 2,
           "labels": [{"name": "bug"}, {"name": "priority"}]
         }
       ].to_json, headers: {'Content-Type' => 'application/json'})
@@ -101,11 +86,6 @@ RSpec.describe PRReport do
       expect(report).to include("URL: https://github.com/fake_owner/fake_repo/pull/1")
       expect(report).to include("Submitter: User One (user1@example.com)")
       expect(report).to include("Status: Opened")
-      expect(report).to include("Comments: 5")
-      expect(report).to include("Commits: 3")
-      expect(report).to include("Changed Files: 3")
-      expect(report).to include("Additions: 100")
-      expect(report).to include("Deletions: 50")
       expect(report).to include("Labels: enhancement")
     end
 
