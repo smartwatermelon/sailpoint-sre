@@ -1,18 +1,17 @@
 require_relative '../pr_report'
 require 'webmock/rspec'
 
-RSpec.describe 'PR Report' do
-  before do
-    # Stub environment variables
-    ENV['PR_REPORT_TOKEN'] = 'fake_token'
-    ENV['PR_REPORT_REPO'] = 'fake_owner/fake_repo'
-    ENV['PR_REPORT_DAYS_AGO'] = '7'
+RSpec.describe PRReport do
+  let(:token) { 'fake_token' }
+  let(:repo) { 'fake_owner/fake_repo' }
+  let(:days_ago) { 7 }
+  let(:pr_report) { PRReport.new(token, repo, days_ago) }
 
-    # Stub GitHub API calls
-    stub_request(:get, "https://api.github.com/repos/fake_owner/fake_repo")
+  before do
+    stub_request(:get, "https://api.github.com/repos/#{repo}")
       .to_return(status: 200, body: '{"full_name": "fake_owner/fake_repo"}', headers: {'Content-Type' => 'application/json'})
 
-    stub_request(:get, "https://api.github.com/repos/fake_owner/fake_repo/pulls?state=all")
+    stub_request(:get, "https://api.github.com/repos/#{repo}/pulls?per_page=100&state=all")
       .to_return(status: 200, body: [
         {
           "state": "open",
@@ -34,46 +33,54 @@ RSpec.describe 'PR Report' do
       ].to_json, headers: {'Content-Type' => 'application/json'})
   end
 
-  it 'generates a report with correct PR counts' do
-    report = generate_report
-
-    expect(report).to include("Opened PRs (1):")
-    expect(report).to include("Closed PRs (1):")
-    expect(report).to include("Merged PRs (1):")
-    expect(report).to include("Total PRs: 3")
+  describe '#initialize' do
+    it 'raises an error if the repository format is invalid' do
+      expect { PRReport.new(token, 'invalid_repo', days_ago) }.to raise_error(ArgumentError)
+    end
   end
 
-  it 'handles rate limiting' do
-    allow_any_instance_of(Octokit::Client).to receive(:rate_limit).and_return(
-      double(remaining: 0, reset: Time.now.to_i + 60)
-    )
-
-    expect { generate_report }.to output(/Rate limit exceeded/).to_stdout
+  describe '#generate_report' do
+    it 'generates a report with correct PR counts' do
+      report = pr_report.generate_report
+      expect(report[:opened].count).to eq(1)
+      expect(report[:closed].count).to eq(1)
+      expect(report[:merged].count).to eq(1)
+    end
   end
 
-  it 'handles authentication errors' do
-    stub_request(:get, "https://api.github.com/repos/fake_owner/fake_repo")
-      .to_return(status: 401)
+  context 'when rate limited' do
+    before do
+      stub_request(:get, "https://api.github.com/repos/#{repo}")
+        .to_return(
+          {status: 403, body: '{"message": "API rate limit exceeded"}', headers: {'Content-Type' => 'application/json'}},
+          {status: 200, body: '{"full_name": "fake_owner/fake_repo"}', headers: {'Content-Type' => 'application/json'}}
+        )
+    end
 
-    expect { generate_report }.to raise_error(SystemExit)
-      .and output(/Error: The provided GitHub token is invalid or has expired./).to_stdout
+    it 'handles rate limiting' do
+      expect { pr_report.generate_report }.to raise_error(RuntimeError, /Error verifying repository/)
+    end
   end
 
-  it 'handles repository not found errors' do
-    stub_request(:get, "https://api.github.com/repos/fake_owner/fake_repo")
-      .to_return(status: 404)
+  context 'when authentication fails' do
+    before do
+      stub_request(:get, "https://api.github.com/repos/#{repo}")
+        .to_return(status: 401, body: '{"message": "Bad credentials"}', headers: {'Content-Type' => 'application/json'})
+    end
 
-    expect { generate_report }.to raise_error(SystemExit)
-      .and output(/Error: The specified repository 'fake_owner\/fake_repo' was not found./).to_stdout
+    it 'handles authentication errors' do
+      expect { pr_report.generate_report }.to raise_error(RuntimeError, /Error verifying repository/)
+    end
   end
-end
 
-def generate_report
-  # Capture stdout to a string
-  original_stdout = $stdout
-  $stdout = StringIO.new
-  load 'pr_report.rb'
-  output = $stdout.string
-  $stdout = original_stdout
-  output
+  context 'when repository is not found' do
+    before do
+      stub_request(:get, "https://api.github.com/repos/#{repo}")
+        .to_return(status: 404, body: '{"message": "Not Found"}', headers: {'Content-Type' => 'application/json'})
+    end
+
+    it 'handles repository not found errors' do
+      expect { pr_report.generate_report }.to raise_error(RuntimeError, /Error verifying repository/)
+    end
+  end
 end
