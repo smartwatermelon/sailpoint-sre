@@ -22,6 +22,9 @@ COPY . .
 # Ensure the .env file is copied if it exists
 COPY .env* ./
 
+# Ensure the .env file exists even if blank
+RUN touch .env
+
 # Run the tests
 RUN bundle exec rspec
 
