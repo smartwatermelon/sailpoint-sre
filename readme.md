@@ -70,8 +70,6 @@ To schedule the report to run once every 24 hours, you can use Cron. Here's how:
 ```
 This will run the container every day at 3:05 a.m., printing the report to the console.
 
-Note: Make sure to adjust the path to your `.env` file and the Docker image name if necessary.
-
 That's it! Your GitHub PR Report Generator is now scheduled to run daily.
 
 ## Future Improvements
