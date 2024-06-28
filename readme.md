@@ -66,7 +66,7 @@ To schedule the report to run once every 24 hours, you can use Cron. Here's how:
 1. Open your terminal and run `crontab -e` to edit your Cron table.
 2. Add the following line to schedule the report:
 ```
-5 3 * * * docker run --rm -v "$(pwd)/.env:/app/.env" github-pr-report
+5 3 * * * PATH_TO_RUN_SH/run.sh [--repo=REPO_NAME] [--token=TOKEN] [--days=DAYS_AGO]
 ```
 This will run the container every day at 3:05 a.m., printing the report to the console.
 
