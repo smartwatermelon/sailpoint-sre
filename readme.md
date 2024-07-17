@@ -60,6 +60,9 @@ Run the container using the provided script:
 
 **The report will be printed to the console.**
 
+## System Diagram
+![system diagram](./pr-report-diagram.png)
+
 ## Scheduling with Cron
 To schedule the report to run once every 24 hours, you can use Cron. Here's how:
 
