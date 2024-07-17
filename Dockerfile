@@ -2,9 +2,8 @@
 FROM ruby:3-slim
 
 # Install necessary system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update -y && apt-get install -y \
     build-essential \
-    git \
  && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory in the container
